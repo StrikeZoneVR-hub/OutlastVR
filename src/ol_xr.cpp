@@ -3547,7 +3547,9 @@ static bool EnsureMarkers() {
         g_mkRect[c][0] = ox; g_mkRect[c][1] = oy; g_mkRect[c][2] = tw; g_mkRect[c][3] = th;
     }
     {   // (Beta 1.1) [BATGAUGE] the camcorder's battery: an outlined cell with its terminal, 0..4 bars inside
-        // (white; red when one bar or none is left), on a dark translucent plate. Then 7-segment digits.
+        // (white; red when one bar or none is left). Then 7-segment digits. No plate behind either: the
+        // gauge floats over the game with nothing but its own white lines, so there is no dark rectangle
+        // hanging low in the view where the game's picture should be.
         auto put = [&](int x, int y, float b, float g, float r, float a) {
             if (x < 0 || y < 0 || x >= AW || y >= AH) return;
             uint8_t* p = &atlas[((size_t)y * AW + x) * 4];
@@ -3557,7 +3559,7 @@ static bool EnsureMarkers() {
             const int ox = s * kBatW, oy = labelsEnd;
             const bool low = s <= 1;
             for (int y = 0; y < kBatH; ++y) for (int x = 0; x < kBatW; ++x) {
-                float a = 0.55f, cb = 14, cg = 14, cr = 14;                         // the plate
+                float a = 0.0f, cb = 0, cg = 0, cr = 0;                             // nothing behind the cell
                 const bool body = x >= 8 && x < kBatW - 16 && y >= 8 && y < kBatH - 8;
                 const bool bodyIn = x >= 12 && x < kBatW - 20 && y >= 12 && y < kBatH - 12;
                 const bool nub = x >= kBatW - 16 && x < kBatW - 9 && y >= 17 && y < kBatH - 17;
@@ -3592,7 +3594,7 @@ static bool EnsureMarkers() {
                 if ((m & 0x20) && x >= L - t && x <= L + t && y >= T && y <= M) on = true;
                 if ((m & 0x40) && y >= M - t && y <= M + t && x >= L && x <= Rr) on = true;
                 if (on) put(ox + x, oy + y, 240, 240, 240, 1.0f);
-                else    put(ox + x, oy + y, 14, 14, 14, 0.55f);
+                else    put(ox + x, oy + y, 0, 0, 0, 0.0f);                          // lit segments only
             }
             g_digRect[d][0] = ox; g_digRect[d][1] = oy; g_digRect[d][2] = kDigW; g_digRect[d][3] = kDigH;
         }
@@ -5349,7 +5351,7 @@ static bool RunXrFrame(IDirect3DDevice9* dev, bool preCaptured) {
             int bars = (int)ceilf(energy * 4.0f - 0.05f);
             if (bars < 0) bars = 0; if (bars > 4) bars = 4;
             if (spares < 0) spares = 0; if (spares > 9) spares = 9;
-            const float w = 0.075f, h = w * (float)kBatH / (float)kBatW;      // metres, at 0.55 m: ~8 deg wide
+            const float w = 0.066f, h = w * (float)kBatH / (float)kBatW;      // metres, at 0.55 m: ~7 deg wide (was 0.075)
             for (int k = 0; k < 2; ++k) {
                 XrCompositionLayerQuad& q = batQuad[k];
                 q.type = XR_TYPE_COMPOSITION_LAYER_QUAD_VALUE;
@@ -5360,7 +5362,7 @@ static bool RunXrFrame(IDirect3DDevice9* dev, bool preCaptured) {
                 const int* rc = k == 0 ? g_batRect[bars] : g_digRect[spares];
                 q.subImage.imageRect.offset = { rc[0], rc[1] }; q.subImage.imageRect.extent = { rc[2], rc[3] };
                 q.pose = IdentityPose();
-                q.pose.position = { k == 0 ? -0.020f : 0.037f, -0.150f, -0.55f };
+                q.pose.position = { k == 0 ? -0.0175f : 0.0325f, -0.150f, -0.55f };
                 q.size.width = k == 0 ? w : h * (float)kDigW / (float)kDigH; q.size.height = h;
                 layers[layerCount++] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&q);
             }
